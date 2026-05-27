@@ -1,40 +1,45 @@
-name: MSVC Build Debug
+name: MSVC Build All Archs
 
 on:
   push:
-    branches:
-      - '**'
+    branches: ['**']
   pull_request:
-    branches:
-      - '**'
-  workflow_dispatch:
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    branches: ['**']
 
 jobs:
-  msvc-build:
-    name: MSVC (${{ matrix.arch }})
+  build:
+    name: Build ${{ matrix.arch }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86, x64, arm64]
-    
+        # x64_x86: Cross-compile x86 from x64 host
+        # x64:     Native x64 build
+        # x64_arm64: Cross-compile arm64 from x64 host
+        include:
+          - arch: x86
+            vcvars_arg: x64_x86
+          - arch: x64
+            vcvars_arg: x64
+          - arch: arm64
+            vcvars_arg: x64_arm64
+
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Setup MSVC Environment
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: arm64
-          vsversion: "18.0" # Explicitly target VS 2025
-
-      - name: Configure CMake
+      - name: Build with MSVC
         shell: cmd
         run: |
-          cmake -B build -G "Visual Studio 18 2025" -A ARM64 -DBUILD_SHARED_LIBS=ON -DLIBSERIALPORT_BUILD_EXAMPLES=ON
+          :: Use the common variable to find vcvarsall.bat regardless of exact version
+          call "%VS170COMNTOOLS%..\..\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.vcvars_arg }}
           
-      - name: Build
-        run: cmake --build build --config Release
+          :: Configure with CMake
+          cmake -B build -G "Ninja" ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DBUILD_SHARED_LIBS=ON ^
+            -DLIBSERIALPORT_BUILD_EXAMPLES=ON ^
+            -DLIBSERIALPORT_MSBUILD=1
+            
+          :: Build the project
+          cmake --build build --config Release
