@@ -8,43 +8,54 @@ set(SERIALPORT_SOURCES
     windows.c
 )
 
-# Define common system libraries for Windows
+# Define common system libraries for Windows API operations
 set(WINDOWS_LIBS setupapi cfgmgr32)
 
-# --- 1. Shared Library Target ---
-add_library(serialport SHARED ${SERIALPORT_SOURCES})
-target_compile_definitions(serialport PRIVATE 
-    LIBSERIALPORT_MSBUILD=1 
-    SP_PRIV=
-)
-target_include_directories(serialport PUBLIC include)
-target_link_libraries(serialport PRIVATE ${WINDOWS_LIBS})
+# --- CONDITIONAL TARGET GENERATION BASED ON BUILD_SHARED_LIBS ---
 
-# --- 2. Static Library Target ---
-add_library(serialport_static STATIC ${SERIALPORT_SOURCES})
-# Ensure both produce 'serialport.lib' but in different folders/targets
-set_target_properties(serialport_static PROPERTIES OUTPUT_NAME "serialport")
-target_compile_definitions(serialport_static PRIVATE 
-    LIBSERIALPORT_MSBUILD=1 
-    SP_PRIV= 
-    SP_API=  # Force empty to prevent dllimport decoration
-)
-target_include_directories(serialport_static PUBLIC include)
-target_link_libraries(serialport_static PRIVATE ${WINDOWS_LIBS})
+if(BUILD_SHARED_LIBS)
+    # ==========================================
+    # SHARED LIBRARY CONFIGURATION
+    # ==========================================
+    add_library(serialport SHARED ${SERIALPORT_SOURCES})
+    target_compile_definitions(serialport PRIVATE 
+        LIBSERIALPORT_MSBUILD=1 
+        SP_PRIV=
+    )
+    # PUBLIC allows dependent targets (like examples) to automatically inherit this directory
+    target_include_directories(serialport PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(serialport PRIVATE ${WINDOWS_LIBS})
 
-# --- 3. Example Build Function ---
-function(add_libserialport_example EX_NAME SRC)
-    # Build example linked against Shared
-    add_executable(${EX_NAME}_shared ${SRC})
-    target_link_libraries(${EX_NAME}_shared PRIVATE serialport)
-    target_include_directories(${EX_NAME}_shared PRIVATE include)
+    # Build the example linked against the Shared Library
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/examples/list_ports.c")
+        add_executable(list_ports_shared examples/list_ports.c)
+        target_link_libraries(list_ports_shared PRIVATE serialport)
+    endif()
+
+else()
+    # ==========================================
+    # STATIC LIBRARY CONFIGURATION
+    # ==========================================
+    add_library(serialport_static STATIC ${SERIALPORT_SOURCES})
     
-    # Build example linked against Static
-    add_executable(${EX_NAME}_static ${SRC})
-    target_link_libraries(${EX_NAME}_static PRIVATE serialport_static)
-    target_include_directories(${EX_NAME}_static PRIVATE include)
-endfunction()
+    # Force the output file name to be 'serialport.lib' instead of 'serialport_static.lib'
+    set_target_properties(serialport_static PROPERTIES OUTPUT_NAME "serialport")
+    
+    # Strip dllimport macros completely to avoid C2491 errors
+    target_compile_definitions(serialport_static PRIVATE 
+        LIBSERIALPORT_MSBUILD=1 
+        SP_PRIV= 
+        SP_API=  
+    )
+    target_include_directories(serialport_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(serialport_static PRIVATE ${WINDOWS_LIBS})
 
-# Add examples
-# Adjust the path to where your examples reside
-add_libserialport_example(list_ports examples/list_ports.c)
+    # Build the example linked against the Static Library
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/examples/list_ports.c")
+        add_executable(list_ports_static examples/list_ports.c)
+        target_link_libraries(list_ports_static PRIVATE serialport_static)
+        # Ensure the example preprocessor also knows SP_API is empty
+        target_compile_definitions(list_ports_static PRIVATE SP_API=)
+    endif()
+
+endif()
