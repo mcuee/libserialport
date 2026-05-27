@@ -68,14 +68,13 @@ target_include_directories(serialport
 # ---------------------------------------------------------------------------
 if(BUILD_SHARED_LIBS)
     if(MSVC)
-        # When building the DLL, we must ensure the headers know we are EXPORTING
-        target_compile_definitions(serialport PRIVATE "BUILDING_LIBSERIALPORT=1")
-        # Ensure SP_API and SP_PRIV are defined correctly for MSVC
-        # libserialport headers typically look for __declspec(dllexport)
-        target_compile_definitions(serialport PRIVATE "SP_API=__declspec(dllexport)")
+        # Define LIBSERIALPORT_MSBUILD to make the header use __declspec(dllexport)
+        target_compile_definitions(serialport PRIVATE "LIBSERIALPORT_MSBUILD=1")
+        
+        # Ensure SP_PRIV is empty as expected by your code
         target_compile_definitions(serialport PRIVATE "SP_PRIV=")
     else()
-        # GCC/Clang Shared
+        # GCC/Clang logic
         target_compile_definitions(serialport PRIVATE 
             "SP_API=__attribute__((visibility(\"default\")))"
             "SP_PRIV=__attribute__((visibility(\"hidden\")))"
