@@ -13,33 +13,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # x64_x86: Cross-compile x86 from x64 host
-        # x64:     Native x64 build
-        # x64_arm64: Cross-compile arm64 from x64 host
         include:
-          - arch: x86
-            vcvars_arg: x64_x86
-          - arch: x64
-            vcvars_arg: x64
-          - arch: arm64
-            vcvars_arg: x64_arm64
+          - { arch: x86, platform: Win32 }
+          - { arch: x64, platform: x64 }
+          - { arch: arm64, platform: ARM64 }
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Build with MSVC
-        shell: cmd
+      - name: Configure and Build
         run: |
-          :: Use the common variable to find vcvarsall.bat regardless of exact version
-          call "%VS170COMNTOOLS%..\..\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.vcvars_arg }}
+          # Configure for Shared Library
+          cmake -B build-shared -A ${{ matrix.platform }} -DBUILD_SHARED_LIBS=ON -DLIBSERIALPORT_BUILD_EXAMPLES=OFF
+          cmake --build build-shared --config Release
           
-          :: Configure with CMake
-          cmake -B build -G "Ninja" ^
-            -DCMAKE_BUILD_TYPE=Release ^
-            -DBUILD_SHARED_LIBS=ON ^
-            -DLIBSERIALPORT_BUILD_EXAMPLES=ON ^
-            -DLIBSERIALPORT_MSBUILD=1
-            
-          :: Build the project
-          cmake --build build --config Release
+          # Configure for Static Library
+          cmake -B build-static -A ${{ matrix.platform }} -DBUILD_SHARED_LIBS=OFF -DLIBSERIALPORT_BUILD_EXAMPLES=OFF
+          cmake --build build-static --config Release
+
+      - name: Archive Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: libserialport-${{ matrix.arch }}
+          path: |
+            build-shared/Release/*.dll
+            build-shared/Release/*.lib
+            build-static/Release/*.lib
