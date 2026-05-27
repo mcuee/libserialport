@@ -8,7 +8,7 @@ on:
     branches:
       - '**'        # Matches every pull request target branch
   workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
-  
+
 jobs:
   # ---------------------------------------------------------------------------
   # Linux Builds (Ubuntu)
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Dependencies
         run: |
@@ -46,7 +46,7 @@ jobs:
           cmake --install build-static
 
       - name: Upload Linux Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: libserialport-linux-x86_64
           path: stage/
@@ -59,7 +59,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Shared Library
         run: |
@@ -82,7 +82,7 @@ jobs:
           cmake --install build-static
 
       - name: Upload macOS Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: libserialport-macos-universal
           path: stage/
@@ -112,7 +112,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup MSYS2 Subsystem
         uses: msys2/setup-msys2@v2
@@ -147,7 +147,7 @@ jobs:
           cmake --install build-static
 
       - name: Upload Windows Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: libserialport-windows-${{ matrix.msys_env }}
           path: stage/
