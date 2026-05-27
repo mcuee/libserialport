@@ -21,7 +21,6 @@ if(WIN32)
     list(APPEND SERIALPORT_SOURCES windows.c)
     set(WINDOWS_LIBS setupapi cfgmgr32)
 elseif(APPLE)
-    # Fix: The upstream macOS backend file is named macosx.c
     list(APPEND SERIALPORT_SOURCES macosx.c)
     find_library(FRAMEWORK_IOKIT IOKit)
     find_library(FRAMEWORK_COREFOUNDATION CoreFoundation)
@@ -42,8 +41,12 @@ target_compile_definitions(serialport PUBLIC SP_PRIV=)
 if(WIN32)
     target_link_libraries(serialport PRIVATE ${WINDOWS_LIBS})
     target_compile_definitions(serialport PRIVATE LIBSERIALPORT_MSBUILD=1)
-elseif(APPLE)
-    target_link_libraries(serialport PRIVATE ${OS_LIBS})
+    
+    # Fix: If we are building a static library on Windows, ensure SP_API is globally 
+    # evaluated as empty for the library AND any consuming targets like examples.
+    if(NOT BUILD_SHARED_LIBS)
+        target_compile_definitions(serialport PUBLIC SP_API=)
+    endif()
 endif()
 
 # --- 3. Examples Build Configuration ---
