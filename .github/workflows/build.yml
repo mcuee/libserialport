@@ -2,10 +2,12 @@ name: Build and Package libserialport
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - '**'        # Matches every branch push
   pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+    branches:
+      - '**'        # Matches every pull request target branch
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
 
 jobs:
   build:
@@ -44,44 +46,43 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libudev-dev pkg-config
 
-    - name: Configure CMake (Windows MSVC)
+    - name: Configure Shared Library Build (Windows MSVC)
       if: matrix.os == 'windows-latest'
       run: |
-        cmake -B build `
+        cmake -B build-shared `
           -A ${{ matrix.arch }} `
           -DBUILD_SHARED_LIBS=ON `
           -DCMAKE_INSTALL_PREFIX=stage
 
-    - name: Configure CMake (Unix-like)
+    - name: Configure Shared Library Build (Unix-like)
       if: matrix.os != 'windows-latest'
       run: |
-        cmake -B build \
+        cmake -B build-shared \
           -DBUILD_SHARED_LIBS=ON \
           -DCMAKE_INSTALL_PREFIX=stage
 
-    - name: Build Project
-      run: cmake --build build --config Release
+    - name: Build Shared Variant
+      run: cmake --build build-shared --config Release
 
-    - name: Install / Stage Artifacts
-      run: cmake --install build --config Release
+    - name: Stage Shared Variant Artifacts
+      run: cmake --install build-shared --config Release
 
-    # We repeat the configuration step for a static library build variant 
-    # to make sure you get all archives (.a / .lib)
-    - name: Configure Static Build
+    # Secondary compilation pass to explicitly capture static archives (.a / .lib)
+    - name: Configure Static Library Build
       run: |
         cmake -B build-static \
           ${{ matrix.os == 'windows-latest' && format('-A {0}', matrix.arch) || '' }} \
           -DBUILD_SHARED_LIBS=OFF \
           -DCMAKE_INSTALL_PREFIX=stage
 
-    - name: Build Static Project
+    - name: Build Static Variant
       run: cmake --build build-static --config Release
 
-    - name: Install / Stage Static Artifacts
+    - name: Stage Static Variant Artifacts
       run: cmake --install build-static --config Release
 
-    - name: Upload Build Archives
-      uses: actions/abstract-embeds/upload-artifact@v4
+    - name: Upload Complete Artifact Package
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact-name }}
         path: stage/
