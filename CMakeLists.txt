@@ -22,9 +22,10 @@ if(WIN32)
     set(WINDOWS_LIBS setupapi cfgmgr32)
 elseif(APPLE)
     list(APPEND SERIALPORT_SOURCES macosx.c)
-    find_library(FRAMEWORK_IOKIT IOKit)
-    find_library(FRAMEWORK_COREFOUNDATION CoreFoundation)
-    set(OS_LIBS ${FRAMEWORK_IOKIT} ${FRAMEWORK_COREFOUNDATION})
+    # Correctly discover Apple frameworks
+    find_library(FRAMEWORK_IOKIT IOKit REQUIRED)
+    find_library(FRAMEWORK_COREFOUNDATION CoreFoundation REQUIRED)
+    set(APPLE_LIBS ${FRAMEWORK_IOKIT} ${FRAMEWORK_COREFOUNDATION})
 else()
     list(APPEND SERIALPORT_SOURCES linux.c)
 endif()
@@ -42,11 +43,14 @@ if(WIN32)
     target_link_libraries(serialport PRIVATE ${WINDOWS_LIBS})
     target_compile_definitions(serialport PRIVATE LIBSERIALPORT_MSBUILD=1)
     
-    # Fix: If we are building a static library on Windows, ensure SP_API is globally 
-    # evaluated as empty for the library AND any consuming targets like examples.
+    # Clean up static vs shared visibility for MSVC compiler passes
     if(NOT BUILD_SHARED_LIBS)
+        # PUBLIC forces both the library and any example executable targets to use this definition
         target_compile_definitions(serialport PUBLIC SP_API=)
     endif()
+elseif(APPLE)
+    # Link Apple Frameworks directly to the target
+    target_link_libraries(serialport PRIVATE ${APPLE_LIBS})
 endif()
 
 # --- 3. Examples Build Configuration ---
