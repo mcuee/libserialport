@@ -1,10 +1,14 @@
 name: MSVC Build All Archs
 
-on: [push, pull_request]
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
 
 jobs:
   build:
-    name: Build ${{ matrix.arch }}
+    name: Build ${ { matrix.arch } }
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -18,23 +22,29 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Build Shared
+      # --- 1. SHARED BUILD PASS ---
+      - name: Build Shared Library
         run: |
-          cmake -B build-shared -A ${{ matrix.platform }} -DBUILD_SHARED_LIBS=ON
+          cmake -B build-shared -A ${ { matrix.platform } } ^
+            -DBUILD_SHARED_LIBS=ON ^
+            -DCMAKE_C_FLAGS="/DLIBSERIALPORT_MSBUILD=1"
           cmake --build build-shared --config Release
-          
-      - name: Build Static
+
+      # --- 2. STATIC BUILD PASS ---
+      - name: Build Static Library
         run: |
-          cmake -B build-static -A ${{ matrix.platform }} -DBUILD_SHARED_LIBS=OFF
+          cmake -B build-static -A ${ { matrix.platform } } ^
+            -DBUILD_SHARED_LIBS=OFF ^
+            -DCMAKE_C_FLAGS="/DSP_API= /DLIBSERIALPORT_MSBUILD=1"
           cmake --build build-static --config Release
 
+      # --- 3. ARCHIVE UNIFIED ARTIFACTS ---
       - name: Archive Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: libserialport-${{ matrix.arch }}
+          name: libserialport-${ { matrix.arch } }
           path: |
-            build-shared/Release/*.dll
-            build-shared/Release/*.lib
-            build-shared/Release/*.exe
-            build-static/Release/*.lib
-            build-static/Release/*.exe
+            build-shared/Release/serialport.dll
+            build-shared/Release/serialport.lib
+            build-shared/Release/list_ports.exe
+            build-static/Release/serialport.lib
