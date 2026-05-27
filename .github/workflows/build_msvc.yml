@@ -28,10 +28,13 @@ jobs:
       - name: Setup MSVC Environment
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: ${{ matrix.arch }}
-          
+          arch: arm64
+          vsversion: "18.0" # Explicitly target VS 2025
+
       - name: Configure CMake
-        run: cmake -B build -G "Ninja" -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLIBSERIALPORT_BUILD_EXAMPLES=ON
+        shell: cmd
+        run: |
+          cmake -B build -G "Visual Studio 18 2025" -A ARM64 -DBUILD_SHARED_LIBS=ON -DLIBSERIALPORT_BUILD_EXAMPLES=ON
           
       - name: Build
         run: cmake --build build --config Release
