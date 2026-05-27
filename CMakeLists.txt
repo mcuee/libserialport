@@ -64,17 +64,25 @@ target_include_directories(serialport
 )
 
 # ---------------------------------------------------------------------------
-# Symbol Visibility (Simplified)
+# Symbol Visibility & Macro Definitions
 # ---------------------------------------------------------------------------
 target_compile_definitions(serialport PRIVATE LIBSERIALPORT_EXPORTING)
 
-if(BUILD_SHARED_LIBS AND NOT MSVC)
-    # Only use visibility attributes for non-MSVC shared builds.
-    # MSVC handles export via __declspec(dllexport) triggered by BUILDING_LIBSERIALPORT
-    target_compile_definitions(serialport PRIVATE 
-        "SP_API=__attribute__((visibility(\"default\")))"
-        "SP_PRIV=__attribute__((visibility(\"hidden\")))"
-    )
+if(BUILD_SHARED_LIBS)
+    if(MSVC)
+        target_compile_definitions(serialport PRIVATE BUILDING_LIBSERIALPORT)
+        # MSVC: SP_PRIV should be empty
+        target_compile_definitions(serialport PRIVATE "SP_PRIV=")
+    else()
+        # GCC/Clang Shared: Use visibility attributes
+        target_compile_definitions(serialport PRIVATE 
+            "SP_API=__attribute__((visibility(\"default\")))"
+            "SP_PRIV=__attribute__((visibility(\"hidden\")))"
+        )
+    endif()
+else()
+    # Static build: Both macros must be empty to avoid syntax errors
+    target_compile_definitions(serialport PRIVATE "SP_API=" "SP_PRIV=")
 endif()
 
 # ---------------------------------------------------------------------------
