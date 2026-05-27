@@ -2,10 +2,13 @@ name: Cross-Platform Build CI
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches:
+      - '**'        # Matches every branch push
   pull_request:
-    branches: [ main, master, develop ]
-
+    branches:
+      - '**'        # Matches every pull request target branch
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
+  
 jobs:
   # ---------------------------------------------------------------------------
   # Linux Builds (Ubuntu)
