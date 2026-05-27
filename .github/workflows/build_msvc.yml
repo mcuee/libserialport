@@ -1,10 +1,6 @@
 name: MSVC Build All Archs
 
-on:
-  push:
-    branches: ['**']
-  pull_request:
-    branches: ['**']
+on: [push, pull_request]
 
 jobs:
   build:
@@ -22,14 +18,14 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Configure and Build
+      - name: Build Shared
         run: |
-          # Configure for Shared Library
-          cmake -B build-shared -A ${{ matrix.platform }} -DBUILD_SHARED_LIBS=ON -DLIBSERIALPORT_BUILD_EXAMPLES=OFF
+          cmake -B build-shared -A ${{ matrix.platform }} -DBUILD_SHARED_LIBS=ON
           cmake --build build-shared --config Release
           
-          # Configure for Static Library
-          cmake -B build-static -A ${{ matrix.platform }} -DBUILD_SHARED_LIBS=OFF -DLIBSERIALPORT_BUILD_EXAMPLES=OFF
+      - name: Build Static
+        run: |
+          cmake -B build-static -A ${{ matrix.platform }} -DBUILD_SHARED_LIBS=OFF
           cmake --build build-static --config Release
 
       - name: Archive Artifacts
@@ -39,4 +35,6 @@ jobs:
           path: |
             build-shared/Release/*.dll
             build-shared/Release/*.lib
+            build-shared/Release/*.exe
             build-static/Release/*.lib
+            build-static/Release/*.exe
