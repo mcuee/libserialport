@@ -23,7 +23,7 @@ jobs:
     
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup MSVC Environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -31,11 +31,7 @@ jobs:
           arch: ${{ matrix.arch }}
 
       - name: Configure CMake
-        run: |
-          cmake -B build -G "Ninja" ^
-            -DCMAKE_BUILD_TYPE=Release ^
-            -DBUILD_SHARED_LIBS=ON ^
-            -DLIBSERIALPORT_BUILD_EXAMPLES=ON
-
+        run: cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLIBSERIALPORT_BUILD_EXAMPLES=ON
+        
       - name: Build
         run: cmake --build build --config Release
