@@ -22,7 +22,6 @@ if(WIN32)
     set(WINDOWS_LIBS setupapi cfgmgr32)
 elseif(APPLE)
     list(APPEND SERIALPORT_SOURCES macosx.c)
-    # Correctly discover Apple frameworks
     find_library(FRAMEWORK_IOKIT IOKit REQUIRED)
     find_library(FRAMEWORK_COREFOUNDATION CoreFoundation REQUIRED)
     set(APPLE_LIBS ${FRAMEWORK_IOKIT} ${FRAMEWORK_COREFOUNDATION})
@@ -41,15 +40,18 @@ target_compile_definitions(serialport PUBLIC SP_PRIV=)
 
 if(WIN32)
     target_link_libraries(serialport PRIVATE ${WINDOWS_LIBS})
-    target_compile_definitions(serialport PRIVATE LIBSERIALPORT_MSBUILD=1)
     
-    # Clean up static vs shared visibility for MSVC compiler passes
-    if(NOT BUILD_SHARED_LIBS)
-        # PUBLIC forces both the library and any example executable targets to use this definition
-        target_compile_definitions(serialport PUBLIC SP_API=)
+    if(BUILD_SHARED_LIBS)
+        # Shared Build: Library defines MSBUILD privately so it exports symbols,
+        # but examples do NOT inherit it so they use dllimport.
+        target_compile_definitions(serialport PRIVATE LIBSERIALPORT_MSBUILD=1)
+    else()
+        # Static Build: Both the library AND the examples MUST see these definitions PUBLICLY.
+        # This prevents the header from falling back to __declspec(dllimport).
+        target_compile_definitions(serialport PUBLIC LIBSERIALPORT_MSBUILD=1 SP_API=)
     endif()
+
 elseif(APPLE)
-    # Link Apple Frameworks directly to the target
     target_link_libraries(serialport PRIVATE ${APPLE_LIBS})
 endif()
 
