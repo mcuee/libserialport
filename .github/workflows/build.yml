@@ -103,8 +103,6 @@ jobs:
             sys_prefix: mingw-w64-ucrt-x86_64
           - msys_env: clang64
             sys_prefix: mingw-w64-clang-x86_64
-          - msys_env: clangarm64
-            sys_prefix: mingw-w64-clang-aarch64
 
     defaults:
       run:
