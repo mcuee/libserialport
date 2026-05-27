@@ -1,0 +1,87 @@
+name: Build and Package libserialport
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }} (${{ matrix.arch || 'default' }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux Build
+          - os: ubuntu-latest
+            artifact-name: libserialport-ubuntu
+
+          # macOS Build
+          - os: macos-latest
+            artifact-name: libserialport-macos
+
+          # Windows MSVC Matrix (x64, x86, ARM64)
+          - os: windows-latest
+            arch: x64
+            artifact-name: libserialport-windows-x64
+          - os: windows-latest
+            arch: Win32
+            artifact-name: libserialport-windows-x86
+          - os: windows-latest
+            arch: ARM64
+            artifact-name: libserialport-windows-arm64
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Install Linux Dependencies
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libudev-dev pkg-config
+
+    - name: Configure CMake (Windows MSVC)
+      if: matrix.os == 'windows-latest'
+      run: |
+        cmake -B build `
+          -A ${{ matrix.arch }} `
+          -DBUILD_SHARED_LIBS=ON `
+          -DCMAKE_INSTALL_PREFIX=stage
+
+    - name: Configure CMake (Unix-like)
+      if: matrix.os != 'windows-latest'
+      run: |
+        cmake -B build \
+          -DBUILD_SHARED_LIBS=ON \
+          -DCMAKE_INSTALL_PREFIX=stage
+
+    - name: Build Project
+      run: cmake --build build --config Release
+
+    - name: Install / Stage Artifacts
+      run: cmake --install build --config Release
+
+    # We repeat the configuration step for a static library build variant 
+    # to make sure you get all archives (.a / .lib)
+    - name: Configure Static Build
+      run: |
+        cmake -B build-static \
+          ${{ matrix.os == 'windows-latest' && format('-A {0}', matrix.arch) || '' }} \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DCMAKE_INSTALL_PREFIX=stage
+
+    - name: Build Static Project
+      run: cmake --build build-static --config Release
+
+    - name: Install / Stage Static Artifacts
+      run: cmake --install build-static --config Release
+
+    - name: Upload Build Archives
+      uses: actions/abstract-embeds/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact-name }}
+        path: stage/
